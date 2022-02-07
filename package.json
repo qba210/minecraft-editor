@@ -1,6 +1,6 @@
 {
   "name": "minecraft-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A npm package that allows you to edit minecraft files saved in .minecraft dirctory",
   "main": "bin/index.js",
   "types": "bin/index.d.ts",

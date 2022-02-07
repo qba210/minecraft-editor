@@ -277,3 +277,113 @@ export class MinecraftOptions{
         fs.writeFileSync(this.path + "options.txt", sstr, {encoding: "utf-8"});
     }
 }
+
+export interface MinecraftResourcepackLanguage{
+    code: string;
+    name: string;
+    region: string;
+    bidirectional: boolean;
+}
+
+export interface MinecraftResourcepack{
+    filename: string;
+    isZip: boolean;
+    isValid?: boolean;
+    packFormat: number;
+    description: string;
+    languages?: MinecraftResourcepackLanguage[];
+}
+
+export class MinecraftResourcepacks{
+    respacksPath: string;
+
+    protected constructor(respackPath: string){
+        this.respacksPath = respackPath;
+    }
+    static fromDefaultDir(): MinecraftResourcepacks{
+        return new MinecraftResourcepacks(require("minecraft-folder-path") + "/resourcepacks/");
+    }
+    static fromMinecraftDir(mcPath: string): MinecraftResourcepacks{
+        let path;
+        if (mcPath){
+            if (fs.existsSync(mcPath)){
+                if (fs.statSync(mcPath).isDirectory()){
+                    path = mcPath;
+                    if (!path.endsWith("/") || !path.endsWith("\\")){
+                        path += "/";
+                    }
+                }else{
+                    throw new Error("Not a directory");
+                }
+            }else{
+                throw new Error("Path does not exists");
+            }
+        }else{
+            return new MinecraftResourcepacks(require("minecraft-folder-path") + "/resourcepacks/");
+        }
+        return new MinecraftResourcepacks(path + "resourcepacks/");
+    }
+    static fromResourcepacksDir(resPath: string): MinecraftResourcepacks{
+        let path;
+        if (resPath){
+            if (fs.existsSync(resPath)){
+                if (fs.statSync(resPath).isDirectory()){
+                    path = resPath;
+                    if (!path.endsWith("/") || !path.endsWith("\\")){
+                        path += "/";
+                    }
+                }else{
+                    throw new Error("Not a directory");
+                }
+            }else{
+                throw new Error("Path does not exists");
+            }
+        }else{
+            return new MinecraftResourcepacks(require("minecraft-folder-path") + "/resourcepacks/");
+        }
+        return new MinecraftResourcepacks(path);
+    }
+
+    getResourcepacks(): MinecraftResourcepack[]{
+        let respacks = fs.readdirSync(this.respacksPath, {withFileTypes: true});
+        let metas: MinecraftResourcepack[] = [];
+        for (let ipack in respacks) {
+            let pack = respacks[ipack];
+            if (pack.isDirectory()){
+                let json: any;
+                try{
+                    json = JSON.parse(fs.readFileSync(`${this.respacksPath}${pack.name}/pack.mcmeta`, "utf-8"));
+                }catch{
+                    metas.push({
+                        filename: pack.name,
+                        isZip: pack.isFile() && pack.name.endsWith(".zip"),
+                        isValid: false,
+                        packFormat: -1,
+                        description: ""
+                    })
+                    continue;
+                }
+                let langs: MinecraftResourcepackLanguage[] = [];
+                if (json.language){
+                    Object.entries(json.language).forEach(([key, val]) => {
+                        let value: any = val;
+                        langs.push({
+                            code: key,
+                            name: value.name,
+                            region: value.region,
+                            bidirectional: value.bidirectional
+                        });
+                    });
+                }
+                metas.push({
+                    filename: pack.name,
+                    isZip: pack.isFile() && pack.name.endsWith(".zip"),
+                    description: json.pack.description,
+                    packFormat: json.pack.pack_format,
+                    languages: langs
+                });
+            }
+        }
+        return metas;
+    }
+}
